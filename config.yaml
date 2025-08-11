@@ -1,0 +1,5 @@
+site:
+  title: "scopoBlog"
+
+database:
+  path: "./blog.db"
