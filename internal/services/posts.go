@@ -73,6 +73,8 @@ func GetPostBySlug(db *sql.DB, slug string) (*models.Post, error) {
 	return &post, nil
 }
 
+
+// i do not understand honestly
 func UpdatePost(db *sql.DB, id int, post *models.Post) (*models.Post, error) {
     post.UpdatedAt = time.Now()
     query := `UPDATE posts SET title = ?, content = ?, status = ?, visible = ?, updated_at = ?
