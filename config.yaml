@@ -3,3 +3,11 @@ site:
 
 database:
   path: "./blog.db"
+
+auth:
+  jwt_secret: "your-super-secret-jwt-key-change-this-in-production-12345"
+  admin_password_hash: "$2a$10$.FIEGAM0xOL3Z8fNJKREue2h.E.ocy3zVrw3bxV1bFW4e6IeMkXpm"
+
+uploads:
+  max_file_size: 5242880  # 5MB in bytes
+  allowed_types: [".jpg", ".jpeg", ".png", ".gif", ".webp"]

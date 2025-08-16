@@ -1,11 +1,10 @@
 package services
 
-import(
+import (
 	"os"
+
 	"gopkg.in/yaml.v3"
 )
-
-
 
 type Config struct {
 	Site struct {
@@ -14,22 +13,27 @@ type Config struct {
 	Database struct {
 		Path string `yaml:"path"`
 	} `yaml:"database"`
+	Auth struct {
+		JWTSecret         string `yaml:"jwt_secret"`
+		AdminPasswordHash string `yaml:"admin_password_hash"`
+	} `yaml:"auth"`
+	Uploads struct {
+		MaxFileSize  int      `yaml:"max_file_size"`
+		AllowedTypes []string `yaml:"allowed_types"`
+	} `yaml:"uploads"`
 }
-
 
 func LoadConfig(configPath string) (*Config, error) {
 	config := &Config{}
 
-
 	file, err := os.ReadFile(configPath)
 	if err != nil {
-		return nil, err 
+		return nil, err
 	}
 
-	
 	err = yaml.Unmarshal(file, config)
 	if err != nil {
-		return nil, err 
+		return nil, err
 	}
 
 	return config, nil

@@ -1,21 +1,17 @@
 package main
 
 import (
-	// "fmt"
 	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	// "internal/service"
-	// "github.com/scopo-user/scopoBlog/internal/services"
-	"github.com/scopophobic/scopoBlog/internal/services"
 	"github.com/scopophobic/scopoBlog/internal/api"
+	"github.com/scopophobic/scopoBlog/internal/services"
 )
 
-
-func main(){
+func main() {
 	cfg, err := services.LoadConfig("./config.yaml")
 
 	if err != nil {
@@ -32,38 +28,48 @@ func main(){
 
 	log.Println("Database initialized successfully.")
 
+	// Initialize services
+	authService := services.NewAuthService(cfg.Auth.JWTSecret, cfg.Auth.AdminPasswordHash)
+
+	// Initialize handlers
+	postsHandler := &api.PostsHandler{DB: db}
+	authHandler := &api.AuthHandler{AuthService: authService}
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 
-	postsHandler := &api.PostsHandler{DB: db}
-
-
-	// api routes 
-
+	// Public routes
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Welcome to the Blog API"))
 	})
-
-	r.Route("/admin", func(r chi.Router){
-		r.Post("/posts",postsHandler.CreatePost)
-		r.Put("/posts/{id}", postsHandler.UpdatePost)
-	})
-	
-
-	// public routes
-	r.Get("/posts", postsHandler.GetAllPosts)
-	r.Get("/posts/{slug}", postsHandler.GetPostBySlug)
 
 	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("pong"))
 	})
 
+	// Public blog routes
+	r.Get("/posts", postsHandler.GetAllPosts)
+	r.Get("/posts/{slug}", postsHandler.GetPostBySlug)
+
+	// Admin routes (protected with authentication)
+	r.Route("/admin", func(r chi.Router) {
+		// Public admin routes (no auth required)
+		r.Post("/login", authHandler.Login)
+
+		// Protected admin routes (auth required)
+		r.Group(func(r chi.Router) {
+			r.Use(api.AuthMiddleware(authService))
+
+			r.Post("/posts", postsHandler.CreatePost)
+			r.Put("/posts/{id}", postsHandler.UpdatePost)
+			r.Delete("/posts/{id}", postsHandler.DeletePost)
+			r.Get("/posts/drafts", postsHandler.GetAllDraftPost)
+		})
+	})
+
 	log.Println("Starting server on :8080")
 
-	// 💡 Use your chi router 'r' here instead of 'nil'
 	if err := http.ListenAndServe(":8080", r); err != nil {
 		log.Fatalf("Could not start server: %v", err)
 	}
-
-
 }
