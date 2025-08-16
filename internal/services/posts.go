@@ -86,3 +86,28 @@ func UpdatePost(db *sql.DB, id int, post *models.Post) (*models.Post, error) {
     post.ID = id
     return post, nil
 }
+
+
+func GetAllDraftPost(db *sql.DB)(*model.Post, error){
+	var query = `SELECT id, title, slug, content, created_at, updated_at FROM posts
+			   WHERE status = 'draft' AND visible = TRUE ORDER BY created_at DESC`
+
+	rows,err := db.Query(query)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []models.Post
+	for rows.Next() {
+		var post models.Post
+		// Note: We are not scanning status or visible since we filtered by them.
+		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Content, &post.CreatedAt, &post.UpdatedAt); err != nil {
+			return nil, err
+		}
+		posts = append(posts, post)
+	}
+
+	return posts, nil
+}
