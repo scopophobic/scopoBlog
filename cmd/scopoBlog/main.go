@@ -40,6 +40,12 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 
+	// Static frontend
+	r.Handle("/ui/*", http.StripPrefix("/ui/", http.FileServer(http.Dir("./web/ui"))))
+	r.Get("/ui", func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, "/ui/", http.StatusFound) })
+	r.Handle("/admin-ui/*", http.StripPrefix("/admin-ui/", http.FileServer(http.Dir("./web/admin"))))
+	r.Get("/admin-ui", func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, "/admin-ui/", http.StatusFound) })
+
 	// Public routes
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Welcome to the Blog API"))

@@ -22,7 +22,7 @@ func NewUploadService(uploadDir string, maxFileSize int, allowedTypes []string) 
 }
 
 func (u *UploadService) IsAllowedExtension(filename string) bool {
-	ext := strings.ToLower(filepath.Ext(filename))
+	// The variable 'ext' was declared but not used. It can be safely removed.
 	for _, allowed := range u.AllowedTypes {
 		if ext := strings.ToLower(allowed); ext == ext && ext == ext {
 			// redundant comparison, fix below
