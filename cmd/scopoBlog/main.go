@@ -34,6 +34,8 @@ func main() {
 	// Initialize handlers
 	postsHandler := &api.PostsHandler{DB: db}
 	authHandler := &api.AuthHandler{AuthService: authService}
+	uploadService := services.NewUploadService("./uploads", cfg.Uploads.MaxFileSize, cfg.Uploads.AllowedTypes)
+	uploadHandler := &api.UploadHandler{Uploader: uploadService}
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -64,6 +66,7 @@ func main() {
 			r.Put("/posts/{id}", postsHandler.UpdatePost)
 			r.Delete("/posts/{id}", postsHandler.DeletePost)
 			r.Get("/posts/drafts", postsHandler.GetAllDraftPost)
+			r.Post("/upload", uploadHandler.Upload)
 		})
 	})
 

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/scopophobic/scopoBlog/internal/models"
@@ -75,6 +76,11 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if strings.TrimSpace(post.Title) == "" {
+		http.Error(w, "title is required", http.StatusBadRequest)
+		return
+	}
+
 	updatedPost, err := services.UpdatePost(h.DB, id, &post)
 	if err != nil {
 		log.Printf("Error updating post %d: %v", id, err)
@@ -93,6 +99,11 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, "invalid Request body", http.StatusBadRequest)
+		return
+	}
+
+	if strings.TrimSpace(post.Title) == "" || strings.TrimSpace(post.Slug) == "" {
+		http.Error(w, "title and slug are required", http.StatusBadRequest)
 		return
 	}
 
@@ -170,4 +181,36 @@ func (h *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type UploadHandler struct {
+	Uploader *services.UploadService
+}
+
+func (h *UploadHandler) Upload(w http.ResponseWriter, r *http.Request) {
+	// Limit request body size
+	r.Body = http.MaxBytesReader(w, r.Body, int64(h.Uploader.MaxFileSize)+1024*1024)
+
+	if err := r.ParseMultipartForm(int64(h.Uploader.MaxFileSize) + 1024*1024); err != nil {
+		http.Error(w, "failed to parse form", http.StatusBadRequest)
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "file is required", http.StatusBadRequest)
+		return
+	}
+	file.Close()
+
+	path, err := h.Uploader.SaveFile(header)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"path": path,
+	})
 }

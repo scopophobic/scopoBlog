@@ -2,6 +2,8 @@ package services
 
 import (
 	"database/sql"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/scopophobic/scopoBlog/internal/models"
@@ -18,6 +20,10 @@ func CreatePost(db *sql.DB, post *models.Post) (*models.Post, error) {
 
 	res, err := db.Exec(query, post.Title, post.Slug, post.Content, post.Status, post.Visible, post.CreatedAt, post.UpdatedAt)
 	if err != nil {
+		// attempt to map unique constraint error
+		if strings.Contains(strings.ToLower(err.Error()), "unique") && strings.Contains(strings.ToLower(err.Error()), "slug") {
+			return nil, fmt.Errorf("slug already exists")
+		}
 		return nil, err
 	}
 

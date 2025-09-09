@@ -24,7 +24,9 @@ func InitDB(filepath string) (*sql.DB, error) {
 		"created_at" DATETIME,
     	"updated_at" DATETIME
 
-	);`
+	);
+	CREATE UNIQUE INDEX IF NOT EXISTS idx_posts_slug ON posts(slug);
+	`
 
 	statement, err := db.Prepare(createTableSQL)
 	if err != nil {
