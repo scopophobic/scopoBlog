@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Blog UI</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;max-width:800px;margin:2rem auto;padding:0 1rem;line-height:1.6}
+    header{display:flex;justify-content:space-between;align-items:center}
+    a{color:#0b67ff;text-decoration:none}
+    a:hover{text-decoration:underline}
+    .post{margin:1rem 0;padding:1rem;border:1px solid #e5e5e5;border-radius:8px}
+    pre{background:#f6f8fa;padding:1rem;border-radius:6px;overflow:auto}
+    code{font-family:ui-monospace,Consolas,Monaco,monospace}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Blog</h1>
+    <nav>
+      <a href="/ui/">Home</a>
+    </nav>
+  </header>
+
+  <main id="app"></main>
+
+  <script>
+    const app = document.getElementById('app');
+    const base = '';
+
+    async function fetchJSON(url){
+      const res = await fetch(url);
+      if(!res.ok) throw new Error('Request failed');
+      return res.json();
+    }
+
+    function renderList(posts){
+      app.innerHTML = '<h2>Posts</h2>' + posts.map(p => `
+        <div class="post">
+          <h3><a href="#/p/${encodeURIComponent(p.slug)}">${p.title}</a></h3>
+          <small>${new Date(p.created_at).toLocaleString()}</small>
+          <p>${(p.content||'').slice(0,160)}...</p>
+        </div>
+      `).join('');
+    }
+
+    function renderPost(post){
+      app.innerHTML = `
+        <article>
+          <a href="#/">← Back</a>
+          <h2>${post.title}</h2>
+          <small>${new Date(post.created_at).toLocaleString()}</small>
+          <pre><code>${post.content.replace(/[&<>]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[s]))}</code></pre>
+        </article>
+      `;
+    }
+
+    async function router(){
+      const hash = location.hash.slice(1);
+      if(hash.startsWith('/p/')){
+        const slug = decodeURIComponent(hash.split('/p/')[1]);
+        try{ const post = await fetchJSON(base + '/posts/' + encodeURIComponent(slug)); renderPost(post); }
+        catch{ app.textContent = 'Post not found'; }
+        return;
+      }
+      try{ const posts = await fetchJSON(base + '/posts'); renderList(posts); }
+      catch{ app.textContent = 'Failed to load posts'; }
+    }
+
+    window.addEventListener('hashchange', router);
+    router();
+  </script>
+</body>
+</html>

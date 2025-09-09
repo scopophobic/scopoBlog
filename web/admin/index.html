@@ -1,0 +1,175 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin UI</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;max-width:900px;margin:2rem auto;padding:0 1rem;line-height:1.6}
+    header{display:flex;justify-content:space-between;align-items:center}
+    input,textarea,select,button{font:inherit;padding:.5rem;border:1px solid #d0d7de;border-radius:6px}
+    textarea{min-height:180px}
+    .row{display:flex;gap:1rem;flex-wrap:wrap}
+    .col{flex:1 1 280px}
+    .card{border:1px solid #e5e5e5;border-radius:8px;padding:1rem;margin:.75rem 0}
+    .muted{color:#666}
+    .error{color:#b00020}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Admin</h1>
+    <div><button id="logoutBtn" style="display:none">Logout</button></div>
+  </header>
+
+  <section id="loginSection" class="card">
+    <h3>Login</h3>
+    <div class="row">
+      <div class="col"><input id="password" type="password" placeholder="Admin password"></div>
+      <div class="col"><button id="loginBtn">Login</button></div>
+    </div>
+    <div id="loginMsg" class="error"></div>
+  </section>
+
+  <section id="app" style="display:none">
+    <div class="card">
+      <h3>Create / Update Post</h3>
+      <div class="row">
+        <div class="col"><input id="title" placeholder="Title"></div>
+        <div class="col"><input id="slug" placeholder="Slug"></div>
+      </div>
+      <div class="row">
+        <div class="col"><textarea id="content" placeholder="Markdown content"></textarea></div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label>Status <select id="status">
+            <option value="draft">draft</option>
+            <option value="published">published</option>
+          </select></label>
+        </div>
+        <div class="col">
+          <label>Visible <select id="visible">
+            <option value="false">false</option>
+            <option value="true">true</option>
+          </select></label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col"><button id="createBtn">Create Post</button></div>
+        <div class="col"><input type="number" id="updateId" placeholder="Post ID to update"></div>
+        <div class="col"><button id="updateBtn">Update Post</button></div>
+      </div>
+      <div id="postMsg" class="error"></div>
+    </div>
+
+    <div class="card">
+      <h3>Drafts</h3>
+      <button id="loadDraftsBtn">Reload Drafts</button>
+      <div id="drafts"></div>
+    </div>
+
+    <div class="card">
+      <h3>Upload Media</h3>
+      <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.gif,.webp">
+      <button id="uploadBtn">Upload</button>
+      <div id="uploadMsg" class="muted"></div>
+    </div>
+  </section>
+
+  <script>
+    const base = '';
+    const loginSection = document.getElementById('loginSection');
+    const app = document.getElementById('app');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginMsg = document.getElementById('loginMsg');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    function setToken(t){ localStorage.setItem('jwt', t); }
+    function getToken(){ return localStorage.getItem('jwt'); }
+    function clearToken(){ localStorage.removeItem('jwt'); }
+
+    function authHeaders(){ return { 'Authorization': 'Bearer ' + getToken() }; }
+
+    function showApp(){ loginSection.style.display='none'; app.style.display='block'; logoutBtn.style.display='inline-block'; }
+    function showLogin(){ app.style.display='none'; loginSection.style.display='block'; logoutBtn.style.display='none'; }
+
+    async function postJSON(url, body){
+      const res = await fetch(url, { method:'POST', headers:{ 'Content-Type':'application/json', ...authHeaders() }, body: JSON.stringify(body) });
+      if(!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
+    async function putJSON(url, body){
+      const res = await fetch(url, { method:'PUT', headers:{ 'Content-Type':'application/json', ...authHeaders() }, body: JSON.stringify(body) });
+      if(!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
+    async function getJSON(url){
+      const res = await fetch(url, { headers: authHeaders() });
+      if(!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
+
+    loginBtn.onclick = async () => {
+      loginMsg.textContent='';
+      try{
+        const password = document.getElementById('password').value;
+        const data = await postJSON(base + '/admin/login', { password });
+        setToken(data.token);
+        showApp();
+      }catch(e){ loginMsg.textContent = 'Login failed'; }
+    };
+
+    logoutBtn.onclick = () => { clearToken(); showLogin(); };
+
+    document.getElementById('createBtn').onclick = async () => {
+      const title = document.getElementById('title').value.trim();
+      const slug = document.getElementById('slug').value.trim();
+      const content = document.getElementById('content').value;
+      if(!title || !slug){ document.getElementById('postMsg').textContent='title and slug required'; return; }
+      try{
+        await postJSON(base + '/admin/posts', { title, slug, content });
+        document.getElementById('postMsg').textContent='Created';
+      }catch(e){ document.getElementById('postMsg').textContent = e.message || 'Create failed'; }
+    };
+
+    document.getElementById('updateBtn').onclick = async () => {
+      const id = document.getElementById('updateId').value;
+      const title = document.getElementById('title').value.trim();
+      const content = document.getElementById('content').value;
+      const status = document.getElementById('status').value;
+      const visible = document.getElementById('visible').value === 'true';
+      if(!id){ document.getElementById('postMsg').textContent='id required'; return; }
+      try{
+        await putJSON(base + '/admin/posts/' + encodeURIComponent(id), { title, content, status, visible });
+        document.getElementById('postMsg').textContent='Updated';
+      }catch(e){ document.getElementById('postMsg').textContent = e.message || 'Update failed'; }
+    };
+
+    document.getElementById('loadDraftsBtn').onclick = async () => {
+      const container = document.getElementById('drafts');
+      container.innerHTML = 'Loading...';
+      try{
+        const drafts = await getJSON(base + '/admin/posts/drafts');
+        container.innerHTML = drafts.map(p => `<div class="card"><strong>${p.title}</strong><br><small class="muted">${new Date(p.created_at).toLocaleString()}</small></div>`).join('');
+      }catch(e){ container.textContent = 'Failed to load drafts'; }
+    };
+
+    document.getElementById('uploadBtn').onclick = async () => {
+      const file = document.getElementById('fileInput').files[0];
+      if(!file){ document.getElementById('uploadMsg').textContent='Select a file first'; return; }
+      const form = new FormData(); form.append('file', file);
+      try{
+        const res = await fetch(base + '/admin/upload', { method:'POST', headers: authHeaders(), body: form });
+        if(!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        document.getElementById('uploadMsg').textContent = 'Uploaded to ' + data.path;
+      }catch(e){ document.getElementById('uploadMsg').textContent = 'Upload failed'; }
+    };
+
+    // Auto-show app if token exists
+    if(getToken()) { showApp(); }
+    else { showLogin(); }
+  </script>
+</body>
+</html>
